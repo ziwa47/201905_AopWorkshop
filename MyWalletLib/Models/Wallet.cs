@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using Autofac.Extras.DynamicProxy;
 
 namespace MyWalletLib.Models
@@ -7,6 +8,7 @@ namespace MyWalletLib.Models
     {
         void Withdraw(string account, decimal amount, string bankingAccount);
         void StoreValue(string bankingAccount, decimal amount, string account);
+        string CreateGuid(string account, int token);
     }
 
     public class Wallet : IWallet
@@ -38,6 +40,14 @@ namespace MyWalletLib.Models
         {
             _bankingAccount.Withdraw(bankingAccount, amount);
             _walletRepo.UpdateDelta(account, amount);
+        }
+
+        [CacheResult(Duration = 1000)]
+        public string CreateGuid(string account, int token)
+        {
+            Console.WriteLine($"sleep 1.5 seconds, account:{account}, token:{token}");
+            Thread.Sleep(1500);
+            return Guid.NewGuid().ToString("N");
         }
     }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Caching;
 using System.Text;
 using System.Threading.Tasks;
 using Autofac;
@@ -53,6 +54,13 @@ class Program
     {
         RegisterContainer();
         var wallet = _container.Resolve<IWallet>();
+
+
+        Console.WriteLine(wallet.CreateGuid("Joey", 91));
+        Console.WriteLine(wallet.CreateGuid("Joey", 91));
+        Console.WriteLine(wallet.CreateGuid("Tom", 66));
+        Console.WriteLine(wallet.CreateGuid("Joey", 91));
+
         //var wallet = new LogParametersDecorator( new Wallet(new FakeWalletRepo(), new FakeBankingAccount(), new FakeFee()),new FakeLogger());
         //var wallet = new Wallet(new FakeWalletRepo(), new FakeBankingAccount(), new FakeFee(), new FakeLogger());
         wallet.Withdraw("joey", 1000m, "919");
@@ -74,11 +82,14 @@ class Program
             .EnableInterfaceInterceptors()
             .InterceptedBy(
                 typeof(LogInterceptor),
-                typeof(AuthorizationInterceptor));
+                typeof(AuthorizationInterceptor),
+                typeof(CacheInterceptor));
 
         containerBuilder.RegisterType<MyContext>().As<IContext>();
+        containerBuilder.RegisterType<MemoryCacheProvider>().As<ICacheProvider>();
         containerBuilder.RegisterType<LogInterceptor>();
         containerBuilder.RegisterType<AuthorizationInterceptor>();
+        containerBuilder.RegisterType<CacheInterceptor>();
 
         //containerBuilder.RegisterDecorator<LogParametersDecorator, IWallet>();
         _container = containerBuilder.Build();
@@ -130,3 +141,89 @@ internal class FakeWalletRepo : IWalletRepo
     }
 }
 
+public class CacheInterceptor : IInterceptor
+{
+    private readonly ICacheProvider _cache;
+
+    public CacheInterceptor(ICacheProvider cache)
+    {
+        _cache = cache;
+    }
+
+    public CacheResultAttribute GetCacheResultAttribute(IInvocation invocation)
+    {
+        return Attribute.GetCustomAttribute(
+                invocation.MethodInvocationTarget,
+                typeof(CacheResultAttribute)
+            )
+            as CacheResultAttribute;
+    }
+
+    public string GetInvocationSignature(IInvocation invocation)
+    {
+        return
+            $"{invocation.TargetType.FullName}-{invocation.Method.Name}-{String.Join("-", invocation.Arguments.Select(a => (a ?? "").ToString()).ToArray())}";
+    }
+
+    public void Intercept(IInvocation invocation)
+    {
+        var cacheAttr = GetCacheResultAttribute(invocation);
+
+        if (cacheAttr == null)
+        {
+            invocation.Proceed();
+            return;
+        }
+
+        string key = GetInvocationSignature(invocation);
+
+        if (_cache.Contains(key))
+        {
+            invocation.ReturnValue = _cache.Get(key);
+            return;
+        }
+
+        invocation.Proceed();
+        var result = invocation.ReturnValue;
+
+        if (result != null)
+        {
+            _cache.Put(key, result, cacheAttr.Duration);
+        }
+    }
+}
+
+public interface ICacheProvider
+{
+    object Get(string key);
+
+    void Put(string key, object value, int duration);
+
+    bool Contains(string key);
+}
+
+public class MemoryCacheProvider : ICacheProvider
+{
+    public object Get(string key)
+    {
+        return MemoryCache.Default[key];
+    }
+
+    public void Put(string key, object value, int duration)
+    {
+        if (duration <= 0)
+            throw new ArgumentException("Duration cannot be less or equal to zero", nameof(duration));
+
+        var policy = new CacheItemPolicy
+        {
+            AbsoluteExpiration = DateTime.Now.AddMilliseconds(duration)
+        };
+
+        MemoryCache.Default.Set(key, value, policy);
+    }
+
+    public bool Contains(string key)
+    {
+        return MemoryCache.Default[key] != null;
+    }
+}

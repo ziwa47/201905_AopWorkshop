@@ -34,5 +34,10 @@
             LogParametersWithStoredValue(bankingAccount, amount, account);
             _wallet.StoreValue(bankingAccount, amount, account);
         }
+
+        public string CreateGuid(string account, int token)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }
