@@ -1,8 +1,8 @@
-﻿using System;
-using System.Linq;
-using Castle.DynamicProxy;
+﻿using Castle.DynamicProxy;
 using MyWalletLib;
 using MyWalletLib.Models;
+using System;
+using System.Linq;
 
 namespace MyConsole
 {
