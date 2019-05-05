@@ -12,7 +12,7 @@ namespace MyConsole
     {
         static void Main(string[] args)
         {
-            var wallet = new LogParametersDecorator( new Wallet(new FakeWalletRepo(), new FakeBankingAccount(), new FakeFee(), new FakeLogger()),new FakeLogger());
+            var wallet = new LogParametersDecorator( new Wallet(new FakeWalletRepo(), new FakeBankingAccount(), new FakeFee()),new FakeLogger());
             //var wallet = new Wallet(new FakeWalletRepo(), new FakeBankingAccount(), new FakeFee(), new FakeLogger());
             wallet.Withdraw("joey", 1000m, "919");
 

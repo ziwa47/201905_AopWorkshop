@@ -44,6 +44,8 @@
     <Compile Include="IBankingAccount.cs" />
     <Compile Include="IFee.cs" />
     <Compile Include="IWalletRepo.cs" />
+    <Compile Include="Models\ILogger.cs" />
+    <Compile Include="Models\LogParametersDecorator.cs" />
     <Compile Include="Models\Wallet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
