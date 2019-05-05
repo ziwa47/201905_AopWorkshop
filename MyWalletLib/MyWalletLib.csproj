@@ -41,6 +41,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IBankingAccount.cs" />
+    <Compile Include="IFee.cs" />
+    <Compile Include="IWalletRepo.cs" />
     <Compile Include="Models\Wallet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
