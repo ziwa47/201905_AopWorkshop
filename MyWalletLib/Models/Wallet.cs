@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Transactions;
 using Autofac.Extras.DynamicProxy;
 
 namespace MyWalletLib.Models
@@ -36,8 +37,10 @@ namespace MyWalletLib.Models
         }
 
         [LogParameters]
+        [Transaction(Role.DBA)]
         public void StoreValue(string bankingAccount, decimal amount, string account)
         {
+            throw new TransactionAbortedException("pee");
             _bankingAccount.Withdraw(bankingAccount, amount);
             _walletRepo.UpdateDelta(account, amount);
         }
@@ -49,6 +52,7 @@ namespace MyWalletLib.Models
             Thread.Sleep(1500);
             return Guid.NewGuid().ToString("N");
         }
+
     }
 
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
@@ -78,3 +82,17 @@ public class Member
     }
 }
 
+public class TransactionAttribute : Attribute
+{
+    public TransactionAttribute(Role role)
+    {
+        Role = role;
+    }
+
+    public Role Role { get; }
+}
+
+public enum Role
+{
+    DBA
+}

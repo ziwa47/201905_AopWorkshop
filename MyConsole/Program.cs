@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.Caching;
 using System.Text;
 using System.Threading.Tasks;
+using System.Transactions;
 using Autofac;
 using Autofac.Extras.DynamicProxy;
 using Castle.DynamicProxy;
@@ -48,7 +49,7 @@ namespace MyConsole
 
 class Program
 {
-    private static IContainer _container;
+    public static IContainer _container;
 
     static void Main(string[] args)
     {
@@ -56,14 +57,14 @@ class Program
         var wallet = _container.Resolve<IWallet>();
 
 
-        Console.WriteLine(wallet.CreateGuid("Joey", 91));
-        Console.WriteLine(wallet.CreateGuid("Joey", 91));
-        Console.WriteLine(wallet.CreateGuid("Tom", 66));
-        Console.WriteLine(wallet.CreateGuid("Joey", 91));
+        //Console.WriteLine(wallet.CreateGuid("Joey", 91));
+        //Console.WriteLine(wallet.CreateGuid("Joey", 91));
+        //Console.WriteLine(wallet.CreateGuid("Tom", 66));
+        //Console.WriteLine(wallet.CreateGuid("Joey", 91));
 
         //var wallet = new LogParametersDecorator( new Wallet(new FakeWalletRepo(), new FakeBankingAccount(), new FakeFee()),new FakeLogger());
         //var wallet = new Wallet(new FakeWalletRepo(), new FakeBankingAccount(), new FakeFee(), new FakeLogger());
-        wallet.Withdraw("joey", 1000m, "919");
+        //wallet.Withdraw("joey", 1000m, "919");
 
         wallet.StoreValue("919", 80, "joey");
     }
@@ -75,6 +76,8 @@ class Program
         containerBuilder.RegisterType<FakeWalletRepo>().As<IWalletRepo>();
         containerBuilder.RegisterType<FakeBankingAccount>().As<IBankingAccount>();
         containerBuilder.RegisterType<FakeFee>().As<IFee>();
+        containerBuilder.RegisterType<FakeNotify>().As<INotification>();
+        containerBuilder.RegisterType<TransactionScopeAdapter>().As<ITransactionScope>();
 
         containerBuilder
             .RegisterType<Wallet>()
@@ -83,19 +86,102 @@ class Program
             .InterceptedBy(
                 typeof(LogInterceptor),
                 typeof(AuthorizationInterceptor),
-                typeof(CacheInterceptor));
+                typeof(CacheInterceptor),
+                typeof(TransactionInterceptor));
 
         containerBuilder.RegisterType<MyContext>().As<IContext>();
         containerBuilder.RegisterType<MemoryCacheProvider>().As<ICacheProvider>();
         containerBuilder.RegisterType<LogInterceptor>();
         containerBuilder.RegisterType<AuthorizationInterceptor>();
         containerBuilder.RegisterType<CacheInterceptor>();
+        containerBuilder.RegisterType<TransactionInterceptor>();
 
         //containerBuilder.RegisterDecorator<LogParametersDecorator, IWallet>();
         _container = containerBuilder.Build();
     }
 }
 
+public class FakeNotify:INotification
+{
+    public void Push(Role role, string message)
+    {
+        Console.WriteLine($"{role}, transaction ex:{message}");
+    }
+}
+
+public class TransactionInterceptor : IInterceptor
+{
+    private readonly INotification _notify;
+
+    public TransactionInterceptor(INotification notify)
+    {
+        _notify = notify;
+    }
+
+    public void Intercept(IInvocation invocation)
+    {
+        var transactionAttribute = GetTransactionAttribute(invocation);
+        if (transactionAttribute == null)
+        {
+            invocation.Proceed();
+        }
+        else
+        {
+            using (var transactionScope = Program._container.Resolve<ITransactionScope>())
+            {
+                try
+                {
+                    invocation.Proceed();
+                    transactionScope.Complete();
+                }
+                catch (TransactionAbortedException ex)
+                {
+                    _notify.Push(transactionAttribute.Role, ex.ToString());
+                    throw;
+                }
+            }
+        }
+    }
+
+    private static TransactionAttribute GetTransactionAttribute(IInvocation invocation)
+    {
+        return Attribute.GetCustomAttribute(invocation.MethodInvocationTarget, typeof(TransactionAttribute)) as
+            TransactionAttribute;
+    }
+}
+
+public interface INotification
+{
+    void Push(Role role, string message);
+}
+
+public interface ITransactionScope : IDisposable
+{
+    void Complete();
+    void Dispose();
+}
+
+public class TransactionScopeAdapter : ITransactionScope
+{
+    private readonly TransactionScope _transactionScope;
+
+    public TransactionScopeAdapter()
+    {
+        _transactionScope = new TransactionScope();
+    }
+
+    public void Complete()
+    {
+        Console.WriteLine("transaction complete");
+        _transactionScope.Complete();
+    }
+
+    public void Dispose()
+    {
+        Console.WriteLine("transaction dispose");
+        _transactionScope.Dispose();
+    }
+}
 public class MyContext : IContext
 {
     public Account GetCurrentUser()
