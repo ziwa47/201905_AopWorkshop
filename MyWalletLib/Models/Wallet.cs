@@ -1,11 +1,11 @@
-﻿using Autofac.Extras.DynamicProxy;
+﻿using System;
+using Autofac.Extras.DynamicProxy;
 
 namespace MyWalletLib.Models
 {
     public interface IWallet
     {
         void Withdraw(string account, decimal amount, string bankingAccount);
-
         void StoreValue(string bankingAccount, decimal amount, string account);
     }
 
@@ -22,8 +22,9 @@ namespace MyWalletLib.Models
             _fee = fee;
         }
 
-
         [LogParameters]
+        [Authorized(UserType.VIP)]
+        [Authorized(UserType.NormalUser)] 
         public void Withdraw(string account, decimal amount, string bankingAccount)
         {
             _walletRepo.UpdateDelta(account, amount * -1);
@@ -40,11 +41,30 @@ namespace MyWalletLib.Models
         }
     }
 
-    public class Member
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public class AuthorizedAttribute : Attribute
     {
-        public bool Register(string name, int age)
+        public UserType UserType { get; }
+
+        public AuthorizedAttribute(UserType userType)
         {
-            return true;
+            UserType = userType;
         }
     }
+
+    public enum UserType
+    {
+        VIP,
+        Guest,
+        NormalUser
+    }
 }
+
+public class Member
+{
+    public bool Register(string name, int age)
+    {
+        return true;
+    }
+}
+
