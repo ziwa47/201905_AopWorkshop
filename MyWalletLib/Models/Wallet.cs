@@ -9,7 +9,6 @@ namespace MyWalletLib.Models
         void StoreValue(string bankingAccount, decimal amount, string account);
     }
 
-    [Intercept(typeof(LogInterceptor))]
     public class Wallet : IWallet
     {
         private readonly IWalletRepo _walletRepo;

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
 using Castle.DynamicProxy;
+using MyWalletLib;
 using MyWalletLib.Models;
 
-namespace MyWalletLib
+namespace MyConsole
 {
     public class LogInterceptor : IInterceptor
     {

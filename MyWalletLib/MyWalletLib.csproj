@@ -56,7 +56,6 @@
     <Compile Include="IContext.cs" />
     <Compile Include="IFee.cs" />
     <Compile Include="IWalletRepo.cs" />
-    <Compile Include="LogInterceptor.cs" />
     <Compile Include="LogParametersAttribute.cs" />
     <Compile Include="Models\ILogger.cs" />
     <Compile Include="Models\LogParametersDecorator.cs" />

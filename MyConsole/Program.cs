@@ -32,8 +32,11 @@ namespace MyConsole
             containerBuilder.RegisterType<FakeBankingAccount>().As<IBankingAccount>();
             containerBuilder.RegisterType<FakeFee>().As<IFee>();
 
-            containerBuilder.RegisterType<Wallet>().As<IWallet>()
-                .EnableInterfaceInterceptors();
+            containerBuilder
+                .RegisterType<Wallet>()
+                .As<IWallet>()
+                .EnableInterfaceInterceptors()
+                .InterceptedBy(typeof(LogInterceptor));
 
             containerBuilder.RegisterType<MyContext>().As<IContext>();
             containerBuilder.RegisterType<LogInterceptor>();
