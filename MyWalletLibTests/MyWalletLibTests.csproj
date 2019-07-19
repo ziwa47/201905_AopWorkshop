@@ -61,6 +61,10 @@
     <Compile Include="WalletTests.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MyConsole\MyConsole.csproj">
+      <Project>{BD0D02A6-F4D5-4C00-B85D-745C55DD3676}</Project>
+      <Name>MyConsole</Name>
+    </ProjectReference>
     <ProjectReference Include="..\MyWalletLib\MyWalletLib.csproj">
       <Project>{e1b88278-8e78-4fd9-88c7-9015183901a1}</Project>
       <Name>MyWalletLib</Name>

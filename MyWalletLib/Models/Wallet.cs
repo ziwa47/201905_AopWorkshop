@@ -1,12 +1,15 @@
-﻿using Autofac.Extras.DynamicProxy;
+﻿using System;
+using System.Threading;
+using System.Transactions;
+using Autofac.Extras.DynamicProxy;
 
 namespace MyWalletLib.Models
 {
     public interface IWallet
     {
         void Withdraw(string account, decimal amount, string bankingAccount);
-
         void StoreValue(string bankingAccount, decimal amount, string account);
+        string CreateGuid(string account, int token);
     }
 
     public class Wallet : IWallet
@@ -22,8 +25,9 @@ namespace MyWalletLib.Models
             _fee = fee;
         }
 
-
         [LogParameters]
+        [Authorized(UserType.VIP)]
+        [Authorized(UserType.NormalUser)] 
         public void Withdraw(string account, decimal amount, string bankingAccount)
         {
             _walletRepo.UpdateDelta(account, amount * -1);
@@ -33,18 +37,62 @@ namespace MyWalletLib.Models
         }
 
         [LogParameters]
+        [Transaction(Role.DBA)]
         public void StoreValue(string bankingAccount, decimal amount, string account)
         {
+            throw new TransactionAbortedException("pee");
             _bankingAccount.Withdraw(bankingAccount, amount);
             _walletRepo.UpdateDelta(account, amount);
         }
+
+        [CacheResult(Duration = 1000)]
+        public string CreateGuid(string account, int token)
+        {
+            Console.WriteLine($"sleep 1.5 seconds, account:{account}, token:{token}");
+            Thread.Sleep(1500);
+            return Guid.NewGuid().ToString("N");
+        }
+
     }
 
-    public class Member
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public class AuthorizedAttribute : Attribute
     {
-        public bool Register(string name, int age)
+        public UserType UserType { get; }
+
+        public AuthorizedAttribute(UserType userType)
         {
-            return true;
+            UserType = userType;
         }
     }
+
+    public enum UserType
+    {
+        VIP,
+        Guest,
+        NormalUser
+    }
+}
+
+public class Member
+{
+    public bool Register(string name, int age)
+    {
+        return true;
+    }
+}
+
+public class TransactionAttribute : Attribute
+{
+    public TransactionAttribute(Role role)
+    {
+        Role = role;
+    }
+
+    public Role Role { get; }
+}
+
+public enum Role
+{
+    DBA
 }
